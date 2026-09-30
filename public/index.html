@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<title>タイマー</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #ffffff;
+  --surface: #f5f5f5;
+  --border:  #d0d0d0;
+  --text:    #111111;
+  --sub:     #666666;
+  --dim:     #aaaaaa;
+  --ring-track: #e8e8e8;
+  --button-hover: #333333;
+  --r:       10px;
+  color-scheme: light;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:      #111111;
+    --surface: #1d1d1d;
+    --border:  #505050;
+    --text:    #f5f5f5;
+    --sub:     #b8b8b8;
+    --dim:     #909090;
+    --ring-track: #3c3c3c;
+    --button-hover: #d8d8d8;
+    color-scheme: dark;
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 16px 20px;
+}
+
+.app { width: 100%; max-width: 400px; flex: 1 0 auto; }
+
+.site-footer {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 40px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--sub);
+}
+
+/* ── タイトル ── */
+h1 { font-size: 13px; letter-spacing: .2em; color: var(--dim); margin-bottom: 20px; text-transform: uppercase; }
+
+/* ── タブ ── */
+.tabs { display: flex; border-bottom: 1.5px solid var(--text); margin-bottom: 28px; }
+.tab {
+  flex: 1; padding: 8px 4px; background: none; border: none;
+  font: inherit; font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--dim); cursor: pointer; border-bottom: 2.5px solid transparent; margin-bottom: -1.5px;
+  transition: color .15s;
+}
+.tab.active { color: var(--text); border-bottom-color: var(--text); }
+.tab:hover:not(.active) { color: var(--sub); }
+
+/* ── パネル ── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── 大きい時刻表示 ── */
+.big-time {
+  font-size: clamp(56px, 15vw, 80px);
+  font-weight: normal;
+  letter-spacing: -.02em;
+  line-height: 1;
+  text-align: center;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8px;
+}
+.big-time.running { /* nothing — モノクロ */ }
+
+.status {
+  text-align: center; font-size: 10px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--dim); height: 14px;
+  margin-bottom: 20px;
+}
+.status.on  { color: var(--text); }
+.status.pause { color: var(--sub); }
+
+/* ── ボタン群 ── */
+.ctrl { display: flex; justify-content: center; align-items: center; gap: 14px; margin-bottom: 16px; }
+
+.btn {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: none; border: 1.5px solid var(--border);
+  font-size: 18px; line-height: 1; cursor: pointer; color: var(--text);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .12s, border-color .12s;
+  flex-shrink: 0;
+}
+.btn:hover:not(:disabled) { background: var(--surface); border-color: var(--text); }
+.btn:active:not(:disabled) { transform: scale(.93); }
+.btn:disabled { opacity: .2; cursor: not-allowed; }
+
+/* メインボタン（大） */
+.btn.main {
+  width: 64px; height: 64px; font-size: 22px;
+  border-color: var(--text); background: var(--text); color: var(--bg);
+}
+.btn.main:hover:not(:disabled) { background: var(--button-hover); border-color: var(--button-hover); }
+
+/* ── ラップ ── */
+.lap-btn {
+  display: block; width: 100%; padding: 7px;
+  background: none; border: 1px solid var(--border); border-radius: var(--r);
+  font: inherit; font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--sub); cursor: pointer; margin-bottom: 10px;
+  transition: border-color .12s, color .12s;
+}
+.lap-btn:hover { border-color: var(--text); color: var(--text); }
+.lap-btn.hidden { display: none; }
+
+.lap-list { max-height: 110px; overflow-y: auto; }
+.lap-row {
+  display: flex; justify-content: space-between;
+  font-size: 12px; padding: 4px 2px; color: var(--sub);
+  border-bottom: .5px solid var(--border);
+}
+.lap-row:last-child { border-bottom: none; }
+
+/* ── 時間入力 ── */
+.lbl { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+
+.time-input-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.num {
+  width: 62px; text-align: center; font: inherit; font-size: 22px;
+  padding: 7px 2px; border: 1.5px solid var(--border); border-radius: var(--r);
+  background: var(--bg); color: var(--text);
+  transition: border-color .12s;
+}
+.num:focus { outline: none; border-color: var(--text); }
+.num::-webkit-inner-spin-button, .num::-webkit-outer-spin-button { -webkit-appearance: none; }
+.sep { font-size: 22px; color: var(--dim); }
+
+/* プリセット */
+.presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 22px; }
+.preset {
+  font: inherit; font-size: 11px; padding: 4px 12px;
+  border: 1px solid var(--border); border-radius: 100px;
+  background: none; color: var(--sub); cursor: pointer;
+  transition: all .12s;
+}
+.preset:hover { border-color: var(--text); color: var(--text); }
+
+/* STARTボタン（横長） */
+.start-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 13px;
+  border: 1.5px solid var(--text); border-radius: var(--r);
+  background: var(--text); color: var(--bg);
+  font: inherit; font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+  cursor: pointer; margin-top: 6px;
+  transition: background .12s;
+}
+.start-btn:hover { background: var(--button-hover); border-color: var(--button-hover); }
+
+/* ── リングエリア（カウントダウン実行中） ── */
+.ring-area { text-align: center; margin-bottom: 4px; }
+
+.ring-wrap { position: relative; width: 340px; height: 340px; margin: 0 auto 6px; }
+.ring-wrap svg { position: absolute; top:0; left:0; width:100%; height:100%; }
+.ring-track { stroke: var(--ring-track); }
+.ring-progress { stroke: var(--text); }
+.ring-inner {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+}
+.ring-hms {
+  font-size: clamp(42px, 11vw, 58px); font-weight: normal; font-variant-numeric: tabular-nums;
+  color: var(--text); line-height: 1;
+}
+.ring-hms.done { animation: flash .55s step-end infinite; }
+@keyframes flash { 50% { opacity: .08; } }
+.ring-sec { font-size: 16px; color: var(--sub); }
+
+.badge   { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--dim); min-height: 14px; margin-bottom: 3px; }
+.sname   { font-size: 14px; color: var(--sub); min-height: 18px; margin-bottom: 2px; }
+.nxt     { font-size: 11px; color: var(--dim); min-height: 15px; margin-top: 3px; }
+
+/* ── インターバルリスト ── */
+.step-list { margin-bottom: 6px; }
+.step-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 5px;
+}
+.step-row.cur { border-color: var(--text); background: var(--surface); }
+.step-num  { font-size: 10px; color: var(--dim); min-width: 14px; }
+.step-lbl  { flex:1; font-size: 12px; color: var(--sub); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.step-time { font-size: 13px; color: var(--text); min-width: 72px; text-align: right; }
+.delbtn    { background:none; border:none; cursor:pointer; color:var(--dim); font-size:15px; padding: 0 3px; transition:color .12s; }
+.delbtn:hover { color: var(--text); }
+
+.add-row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom: 12px; }
+.txt-in {
+  flex:1; min-width:80px; font:inherit; font-size:12px;
+  padding: 7px 9px; border: 1.5px solid var(--border); border-radius: var(--r);
+  background: var(--bg); color: var(--text);
+}
+.txt-in::placeholder { color: var(--dim); }
+.txt-in:focus { outline:none; border-color: var(--text); }
+.add-btn {
+  padding: 7px 13px; background:none; border: 1.5px solid var(--border); border-radius: var(--r);
+  font:inherit; font-size:11px; letter-spacing:.08em; color:var(--text); cursor:pointer;
+  transition:all .12s; white-space:nowrap;
+}
+.add-btn:hover { border-color: var(--text); background: var(--surface); }
+
+.rep-row { display:flex; align-items:center; gap:10px; margin-bottom: 6px; }
+.rep-row .lbl { margin:0; }
+.rep-in {
+  width:52px; text-align:center; font:inherit; font-size:15px;
+  padding: 5px 4px; border: 1.5px solid var(--border); border-radius: var(--r);
+  background:var(--bg); color:var(--text);
+}
+.rep-in:focus { outline:none; border-color: var(--text); }
+.rep-in::-webkit-inner-spin-button, .rep-in::-webkit-outer-spin-button { -webkit-appearance:none; }
+.inf-btn {
+  font:inherit; font-size:13px; padding: 3px 11px;
+  border: 1px solid var(--border); border-radius:100px;
+  background:none; cursor:pointer; color:var(--sub); transition:all .12s;
+}
+.inf-btn.on { border-color:var(--text); color:var(--text); }
+
+/* 区切り線 */
+hr { border:none; border-top: .5px solid var(--border); margin: 18px 0; }
+
+.hint { font-size:11px; color:var(--dim); padding: 5px 2px 3px; }
+
+/* ── 音量スライダー ── */
+.vol-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: var(--r);
+}
+.vol-icon { font-size: 14px; color: var(--sub); flex-shrink:0; width:18px; text-align:center; }
+.vol-slider {
+  flex: 1; -webkit-appearance: none; appearance: none;
+  height: 3px; background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
+}
+.vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--text); cursor: pointer;
+}
+.vol-slider::-moz-range-thumb {
+  width: 14px; height: 14px; border: none;
+  border-radius: 50%; background: var(--text); cursor: pointer;
+}
+.vol-val { font-size: 11px; color: var(--sub); min-width: 30px; text-align: right; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Timer</h1>
+
+  <div class="vol-row">
+    <span class="vol-icon">🔈</span>
+    <input class="vol-slider" type="range" id="volSlider" min="15" max="90" value="30" oninput="updateVol(this)">
+    <span class="vol-val" id="volVal">100%</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('up')">Count Up</button>
+    <button class="tab"        onclick="switchTab('down')">Count Down</button>
+    <button class="tab"        onclick="switchTab('iv')">Interval</button>
+  </div>
+
+  <!-- ═══════════ COUNT UP ═══════════ -->
+  <div id="pup" class="panel active">
+    <div class="big-time" id="upDisp">00:00:00</div>
+    <div class="status" id="upSt"></div>
+
+    <div class="ctrl">
+      <button class="btn" onclick="upReset()" title="リセット">↺</button>
+      <button class="btn main" id="upBtn" onclick="upToggle()">▶</button>
+      <button class="btn" id="upLapBtn" onclick="upLap()" title="ラップ" disabled>⚑</button>
+    </div>
+
+    <button class="lap-btn hidden" id="lapToggleBtn" onclick="upLap()">+ Lap</button>
+    <div class="lap-list" id="upLaps"></div>
+  </div>
+
+  <!-- ═══════════ COUNT DOWN ═══════════ -->
+  <div id="pdown" class="panel">
+
+    <!-- 設定画面 -->
+    <div id="cdSetup">
+      <div class="lbl">時間を設定</div>
+      <div class="time-input-row">
+        <input class="num" type="number" id="cdH" min="0" max="23" value="0">
+        <span class="sep">:</span>
+        <input class="num" type="number" id="cdM" min="0" max="59" value="5">
+        <span class="sep">:</span>
+        <input class="num" type="number" id="cdS" min="0" max="59" value="0">
+      </div>
+      <div class="presets">
+        <button class="preset" onclick="sp(0,1,0)">1分</button>
+        <button class="preset" onclick="sp(0,3,0)">3分</button>
+        <button class="preset" onclick="sp(0,5,0)">5分</button>
+        <button class="preset" onclick="sp(0,10,0)">10分</button>
+        <button class="preset" onclick="sp(0,25,0)">25分</button>
+        <button class="preset" onclick="sp(1,0,0)">60分</button>
+      </div>
+      <button class="start-btn" onclick="cdBegin()">▶ &nbsp;スタート</button>
+    </div>
+
+    <!-- 実行画面 -->
+    <div id="cdRun" style="display:none">
+      <div class="ring-area">
+        <div class="badge" id="cdBadge"></div>
+        <div class="sname" id="cdName"></div>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 340 340" fill="none">
+            <circle class="ring-track" cx="170" cy="170" r="155" stroke-width="8"/>
+            <circle class="ring-progress" id="cdRing" cx="170" cy="170" r="155"
+              stroke-width="8"
+              stroke-dasharray="973.89" stroke-dashoffset="0"
+              stroke-linecap="round"
+              transform="rotate(-90 170 170)"
+              style="transition:stroke-dashoffset .85s linear"/>
+          </svg>
+          <div class="ring-inner">
+            <div class="ring-hms" id="cdHms">00:00:00</div>
+            <div class="ring-sec" id="cdSec">— 秒</div>
+          </div>
+        </div>
+        <div class="status" id="cdSt"></div>
+        <div class="nxt" id="cdNxt"></div>
+      </div>
+      <div class="ctrl">
+        <button class="btn" onclick="cdStop()" title="停止">■</button>
+        <button class="btn main" id="cdTogBtn" onclick="cdToggle()">⏸</button>
+        <button class="btn" onclick="cdSkip()" title="次へ">⏭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ INTERVAL ═══════════ -->
+  <div id="piv" class="panel">
+
+    <!-- 設定画面 -->
+    <div id="ivSetup">
+      <div class="lbl">ステップを追加</div>
+      <div class="step-list" id="ilist"></div>
+
+      <div class="add-row">
+        <input class="txt-in" id="newLbl" placeholder="ラベル（省略可）" maxlength="20">
+        <div class="time-input-row" style="margin:0;gap:4px;">
+          <input class="num" type="number" id="newH" min="0" max="23" value="0" style="width:50px;font-size:16px;">
+          <span class="sep" style="font-size:16px;">:</span>
+          <input class="num" type="number" id="newM" min="0" max="59" value="1" style="width:50px;font-size:16px;">
+          <span class="sep" style="font-size:16px;">:</span>
+          <input class="num" type="number" id="newS" min="0" max="59" value="0" style="width:50px;font-size:16px;">
+        </div>
+        <button class="add-btn" onclick="addStep()">＋追加</button>
+      </div>
+
+      <div class="rep-row">
+        <span class="lbl">繰り返し</span>
+        <input type="number" class="rep-in" id="repCnt" min="1" max="999" value="3">
+        <span style="font-size:12px;color:var(--dim);">回</span>
+        <button class="inf-btn" id="infBtn" onclick="toggleInf()">∞</button>
+      </div>
+
+      <button class="start-btn" id="ivStartBtn" onclick="ivBegin()" disabled>▶ &nbsp;スタート</button>
+    </div>
+
+    <!-- 実行画面 -->
+    <div id="ivRun" style="display:none">
+      <div class="ring-area">
+        <div class="badge" id="ivBadge"></div>
+        <div class="sname" id="ivName"></div>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 340 340" fill="none">
+            <circle class="ring-track" cx="170" cy="170" r="155" stroke-width="8"/>
+            <circle class="ring-progress" id="ivRing" cx="170" cy="170" r="155"
+              stroke-width="8"
+              stroke-dasharray="973.89" stroke-dashoffset="0"
+              stroke-linecap="round"
+              transform="rotate(-90 170 170)"
+              style="transition:stroke-dashoffset .85s linear"/>
+          </svg>
+          <div class="ring-inner">
+            <div class="ring-hms" id="ivHms">00:00:00</div>
+            <div class="ring-sec" id="ivSec">— 秒</div>
+          </div>
+        </div>
+        <div class="status" id="ivSt"></div>
+        <div class="nxt" id="ivNxt"></div>
+      </div>
+      <div class="ctrl">
+        <button class="btn" onclick="ivStop()" title="停止">■</button>
+        <button class="btn main" id="ivTogBtn" onclick="ivToggle()">⏸</button>
+        <button class="btn" onclick="ivSkip()" title="次へ">⏭</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.app -->
+<footer class="site-footer">Potassium Iodide &amp; Yuki Orita 2026</footer>
+
+<script>
+// ─────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function fmt(ms) {
+  let s = Math.floor(ms / 1000);
+  let m = Math.floor(s / 60);
+  let h = Math.floor(m / 60);
+  return [h, m % 60, s % 60].map(v => String(v).padStart(2,'0')).join(':');
+}
+function secLeft(ms) { return Math.ceil(ms / 1000); }
+
+// ── 音量 (基準0.3 / min 0.15 / max 0.9) ──
+let volGain = 0.30;
+function updateVol(el) {
+  // スライダー値: 15〜90 → gain: 0.15〜0.90
+  volGain = el.value / 100;
+  // 表示: 基準(30)を100%として相対パーセント
+  const pct = Math.round(el.value / 30 * 100);
+  $('volVal').textContent = pct + '%';
+  // アイコン切り替え
+  const icon = el.value < 30 ? '🔈' : el.value < 60 ? '🔉' : '🔊';
+  el.previousElementSibling.textContent = icon;
+}
+
+function beep(done) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const seq = done
+      ? [[880,0,.22],[1100,.22,.44],[880,.44,.66],[1100,.66,.88]]
+      : [[660,0,.18]];
+    seq.forEach(([f,s,e]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.value = f;
+      const t = ctx.currentTime;
+      g.gain.setValueAtTime(0, t+s);
+      g.gain.linearRampToValueAtTime(volGain, t+s+.03);
+      g.gain.linearRampToValueAtTime(0, t+e);
+      o.start(t+s); o.stop(t+e+.05);
+    });
+  } catch(e){}
+}
+
+// ─────────────────────────────────────────
+// COUNT UP
+// ─────────────────────────────────────────
+let uRun=false, uMs=0, uT0=0, uRaf=null, uLaps=[];
+
+function uTick() {
+  uMs = Date.now() - uT0;
+  $('upDisp').textContent = fmt(uMs);
+  uRaf = requestAnimationFrame(uTick);
+}
+
+function upToggle() {
+  if (!uRun) {
+    uT0 = Date.now() - uMs;
+    uRun = true;
+    $('upBtn').textContent = '⏸';
+    setSt('upSt','RUNNING','on');
+    $('upLapBtn').disabled = false;
+    uTick();
+  } else {
+    cancelAnimationFrame(uRaf);
+    uRun = false;
+    $('upBtn').textContent = '▶';
+    setSt('upSt','PAUSED','pause');
+  }
+}
+
+function upReset() {
+  cancelAnimationFrame(uRaf);
+  uRun=false; uMs=0; uLaps=[];
+  $('upDisp').textContent = '00:00:00';
+  $('upBtn').textContent = '▶';
+  setSt('upSt','','');
+  $('upLapBtn').disabled = true;
+  $('lapToggleBtn').classList.add('hidden');
+  $('upLaps').innerHTML = '';
+}
+
+function upLap() {
+  if (!uRun) return;
+  uLaps.push(uMs);
+  $('lapToggleBtn').classList.remove('hidden');
+  $('upLaps').innerHTML = uLaps.map((t,i) =>
+    `<div class="lap-row"><span>Lap ${uLaps.length - i}</span><span>${fmt(t)}</span></div>`
+  ).reverse().join('');
+}
+
+// ─────────────────────────────────────────
+// COUNT DOWN  (独立セッション)
+// ─────────────────────────────────────────
+let cdSess = null;
+
+function sp(h,m,s){ $('cdH').value=h; $('cdM').value=m; $('cdS').value=s; }
+
+function cdBegin() {
+  const h=+$('cdH').value||0, m=+$('cdM').value||0, s=+$('cdS').value||0;
+  const ms = (h*3600 + m*60 + s)*1000;
+  if (ms <= 0) return;
+
+  cdSess = mkSess([{label:'',ms}], 1);
+
+  $('cdSetup').style.display = 'none';
+  $('cdRun').style.display   = '';
+  $('cdTogBtn').textContent  = '⏸';
+  $('cdTogBtn').disabled     = false;
+  $('cdHms').classList.remove('done');
+  setSt('cdSt','RUNNING','on');
+  // transition無効→初期offset確定→再有効化→tick開始
+  setRingImmediate('cdRing', 0);
+  requestAnimationFrame(() => { cdUI(); cdSess.raf = requestAnimationFrame(cdTick); });
+}
+
+function cdToggle() {
+  if (!cdSess) return;
+  pauseResume(cdSess, 'cdTogBtn','cdSt', cdTick);
+}
+function cdSkip() {
+  if (!cdSess) return;
+  cancelAnimationFrame(cdSess.raf);
+  cdSess.stepEnd = Date.now();
+  cdNext();
+}
+function cdStop() {
+  if (cdSess) { cancelAnimationFrame(cdSess.raf); cdSess=null; }
+  $('cdRun').style.display   = 'none';
+  $('cdSetup').style.display = '';
+  $('cdHms').classList.remove('done');
+  resetRingUI('cdHms','cdSec','cdSt','cdBadge','cdName','cdNxt','cdRing','cdTogBtn');
+}
+
+function cdUI() {
+  if (!cdSess) return;
+  const step = cdSess.queue[cdSess.curStep];
+  const remain = cdSess.paused ? cdSess.pauseLeft : Math.max(0, cdSess.stepEnd - Date.now());
+  const pct = cdSess.stepTotal > 0 ? remain / cdSess.stepTotal : 0;
+  $('cdRing').style.strokeDashoffset = 973.89 * (1 - pct);
+  $('cdHms').textContent = fmt(remain);
+  $('cdSec').textContent = secLeft(remain) + ' 秒';
+  $('cdBadge').textContent = '';
+  $('cdName').textContent  = step.label || '';
+  $('cdNxt').textContent   = '';
+}
+
+function cdTick() {
+  if (!cdSess || cdSess.paused) return;
+  cdUI();
+  if (cdSess.stepEnd - Date.now() <= 0) { cdNext(); return; }
+  cdSess.raf = requestAnimationFrame(cdTick);
+}
+
+function cdNext() {
+  if (!cdSess) return;
+  cancelAnimationFrame(cdSess.raf);
+  beep(true);
+  $('cdHms').textContent = '00:00:00';
+  $('cdSec').textContent = '0 秒';
+  $('cdHms').classList.add('done');
+  setSt('cdSt','完了！','on');
+  $('cdRing').style.strokeDashoffset = 973.89;
+  $('cdTogBtn').textContent = '▶';
+  $('cdTogBtn').disabled = true;
+  $('cdNxt').textContent = '';
+  cdSess = null;
+}
+
+// ─────────────────────────────────────────
+// INTERVAL  (独立セッション)
+// ─────────────────────────────────────────
+let ivList=[], isInf=false, ivSess=null;
+
+function renderSteps() {
+  if (!ivList.length) {
+    $('ilist').innerHTML = '<div class="hint">ステップを追加してください</div>';
+    $('ivStartBtn').disabled = true;
+    return;
+  }
+  $('ivStartBtn').disabled = false;
+  $('ilist').innerHTML = ivList.map((iv,i) =>
+    `<div class="step-row">
+      <span class="step-num">${i+1}</span>
+      <span class="step-lbl">${iv.label || '—'}</span>
+      <span class="step-time">${fmt(iv.ms)}</span>
+      <button class="delbtn" onclick="delStep(${i})">✕</button>
+    </div>`
+  ).join('');
+}
+
+function addStep() {
+  const h=+$('newH').value||0, m=+$('newM').value||0, s=+$('newS').value||0;
+  const ms=(h*3600+m*60+s)*1000;
+  if (ms<=0) return;
+  ivList.push({label:$('newLbl').value.trim(), ms});
+  $('newLbl').value='';
+  renderSteps();
+}
+function delStep(i){ ivList.splice(i,1); renderSteps(); }
+function toggleInf(){
+  isInf=!isInf;
+  $('infBtn').classList.toggle('on',isInf);
+  $('repCnt').disabled=isInf;
+}
+renderSteps();
+
+function ivBegin() {
+  if (!ivList.length) return;
+  const rounds = isInf ? Infinity : (+$('repCnt').value||1);
+  ivSess = mkSess(ivList.map(iv=>({label:iv.label,ms:iv.ms})), rounds);
+
+  $('ivSetup').style.display = 'none';
+  $('ivRun').style.display   = '';
+  $('ivTogBtn').textContent  = '⏸';
+  $('ivTogBtn').disabled     = false;
+  $('ivHms').classList.remove('done');
+  setSt('ivSt','RUNNING','on');
+  setRingImmediate('ivRing', 0);
+  requestAnimationFrame(() => { ivUI(); ivSess.raf = requestAnimationFrame(ivTick); });
+}
+
+function ivToggle() {
+  if (!ivSess) return;
+  pauseResume(ivSess, 'ivTogBtn','ivSt', ivTick);
+}
+function ivSkip() {
+  if (!ivSess) return;
+  cancelAnimationFrame(ivSess.raf);
+  ivSess.stepEnd = Date.now();
+  ivNext();
+}
+function ivStop() {
+  if (ivSess) { cancelAnimationFrame(ivSess.raf); ivSess=null; }
+  $('ivRun').style.display   = 'none';
+  $('ivSetup').style.display = '';
+  $('ivHms').classList.remove('done');
+  resetRingUI('ivHms','ivSec','ivSt','ivBadge','ivName','ivNxt','ivRing','ivTogBtn');
+}
+
+function ivUI() {
+  if (!ivSess) return;
+  const step = ivSess.queue[ivSess.curStep];
+  const rounds = ivSess.rounds===Infinity ? '∞' : ivSess.rounds;
+  const remain = ivSess.paused ? ivSess.pauseLeft : Math.max(0, ivSess.stepEnd - Date.now());
+  const pct = ivSess.stepTotal > 0 ? remain / ivSess.stepTotal : 0;
+  $('ivRing').style.strokeDashoffset = 973.89 * (1 - pct);
+  $('ivHms').textContent  = fmt(remain);
+  $('ivSec').textContent  = secLeft(remain) + ' 秒';
+  $('ivBadge').textContent = `ROUND ${ivSess.curRound} / ${rounds}   STEP ${ivSess.curStep+1} / ${ivSess.queue.length}`;
+  $('ivName').textContent  = step.label || '';
+  const nxt = ivSess.queue[ivSess.curStep+1];
+  const hasNxtRound = ivSess.rounds===Infinity || ivSess.curRound < ivSess.rounds;
+  if (nxt)               $('ivNxt').textContent = `NEXT: ${nxt.label || fmt(nxt.ms)}`;
+  else if (hasNxtRound)  $('ivNxt').textContent = `NEXT ROUND: ${ivSess.queue[0].label || fmt(ivSess.queue[0].ms)}`;
+  else                   $('ivNxt').textContent = '最後のステップ';
+}
+
+function ivTick() {
+  if (!ivSess || ivSess.paused) return;
+  ivUI();
+  if (ivSess.stepEnd - Date.now() <= 0) { ivNext(); return; }
+  ivSess.raf = requestAnimationFrame(ivTick);
+}
+
+function ivNext() {
+  if (!ivSess) return;
+  cancelAnimationFrame(ivSess.raf);
+  const lastStep  = ivSess.curStep >= ivSess.queue.length - 1;
+  const lastRound = ivSess.rounds !== Infinity && ivSess.curRound >= ivSess.rounds;
+
+  if (lastStep && lastRound) {
+    beep(true);
+    $('ivHms').textContent = '00:00:00'; $('ivSec').textContent = '0 秒';
+    $('ivHms').classList.add('done');
+    setSt('ivSt','完了！','on');
+    $('ivRing').style.strokeDashoffset = 973.89;
+    $('ivTogBtn').textContent='▶'; $('ivTogBtn').disabled=true;
+    $('ivNxt').textContent=''; $('ivBadge').textContent='';
+    ivSess=null; return;
+  }
+
+  beep(false);
+  if (lastStep) { ivSess.curRound++; ivSess.curStep=0; }
+  else          { ivSess.curStep++; }
+  const step = ivSess.queue[ivSess.curStep];
+  ivSess.stepTotal = step.ms;
+  ivSess.stepEnd   = Date.now() + step.ms;
+  ivSess.paused    = false;
+  setRingImmediate('ivRing', 0);
+  requestAnimationFrame(() => { ivUI(); ivSess.raf = requestAnimationFrame(ivTick); });
+}
+
+// ─────────────────────────────────────────
+// SHARED HELPERS
+// ─────────────────────────────────────────
+// transitionを無効化して即座にoffsetをセット、次フレームでtransition復活
+function setRingImmediate(ringId, offset) {
+  const el = $(ringId);
+  el.style.transition = 'none';
+  el.style.strokeDashoffset = String(offset);
+  // 強制reflow
+  el.getBoundingClientRect();
+  el.style.transition = 'stroke-dashoffset .85s linear';
+}
+
+function mkSess(queue, rounds) {
+  const step = queue[0];
+  return {
+    queue, rounds, curRound:1, curStep:0,
+    stepTotal: step.ms,
+    stepEnd:   Date.now() + step.ms,
+    paused: false, pauseLeft: 0, raf: null
+  };
+}
+
+function pauseResume(sess, togId, stId, tickFn) {
+  if (!sess.paused) {
+    cancelAnimationFrame(sess.raf);
+    sess.paused    = true;
+    sess.pauseLeft = Math.max(0, sess.stepEnd - Date.now());
+    $(togId).textContent = '▶';
+    setSt(stId,'PAUSED','pause');
+  } else {
+    sess.stepEnd = Date.now() + sess.pauseLeft;
+    sess.paused  = false;
+    $(togId).textContent = '⏸';
+    setSt(stId,'RUNNING','on');
+    sess.raf = requestAnimationFrame(tickFn);
+  }
+}
+
+function setSt(id, txt, cls) {
+  const el = $(id);
+  el.textContent = txt;
+  el.className   = 'status' + (cls ? ' ' + cls : '');
+}
+
+function resetRingUI(hmsId,secId,stId,badgeId,nameId,nxtId,ringId,togId) {
+  $(hmsId).textContent  = '00:00:00';
+  $(secId).textContent  = '— 秒';
+  setSt(stId,'','');
+  $(badgeId).textContent = '';
+  $(nameId).textContent  = '';
+  $(nxtId).textContent   = '';
+  $(ringId).style.strokeDashoffset = 0;
+  $(togId).textContent  = '⏸';
+  $(togId).disabled     = false;
+}
+
+// ─────────────────────────────────────────
+// TAB
+// ─────────────────────────────────────────
+function switchTab(t) {
+  const keys = ['up','down','iv'];
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', keys[i]===t));
+  ['pup','pdown','piv'].forEach((id,i) => $(id).classList.toggle('active', keys[i]===t));
+}
+</script>
+</body>
+</html>
