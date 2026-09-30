@@ -56,6 +56,8 @@ body {
   font-size: 10px;
   color: var(--sub);
 }
+.site-footer a { color: inherit; text-underline-offset: 2px; }
+.site-footer a:hover { color: var(--text); }
 
 /* ── タイトル ── */
 h1 { font-size: 13px; letter-spacing: .2em; color: var(--dim); margin-bottom: 20px; text-transform: uppercase; }
@@ -102,7 +104,7 @@ h1 { font-size: 13px; letter-spacing: .2em; color: var(--dim); margin-bottom: 20
 .btn {
   width: 48px; height: 48px; border-radius: 50%;
   background: none; border: 1.5px solid var(--border);
-  font-size: 18px; line-height: 1; cursor: pointer; color: var(--text);
+  font-size: 10px; line-height: 1; cursor: pointer; color: var(--text);
   display: inline-flex; align-items: center; justify-content: center;
   transition: background .12s, border-color .12s;
   flex-shrink: 0;
@@ -113,7 +115,7 @@ h1 { font-size: 13px; letter-spacing: .2em; color: var(--dim); margin-bottom: 20
 
 /* メインボタン（大） */
 .btn.main {
-  width: 64px; height: 64px; font-size: 22px;
+  width: 64px; height: 64px; font-size: 11px;
   border-color: var(--text); background: var(--text); color: var(--bg);
 }
 .btn.main:hover:not(:disabled) { background: var(--button-hover); border-color: var(--button-hover); }
@@ -206,7 +208,7 @@ h1 { font-size: 13px; letter-spacing: .2em; color: var(--dim); margin-bottom: 20
 .step-num  { font-size: 10px; color: var(--dim); min-width: 14px; }
 .step-lbl  { flex:1; font-size: 12px; color: var(--sub); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .step-time { font-size: 13px; color: var(--text); min-width: 72px; text-align: right; }
-.delbtn    { background:none; border:none; cursor:pointer; color:var(--dim); font-size:15px; padding: 0 3px; transition:color .12s; }
+.delbtn    { background:none; border:none; cursor:pointer; color:var(--dim); font-size:10px; padding: 0 3px; transition:color .12s; }
 .delbtn:hover { color: var(--text); }
 
 .add-row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom: 12px; }
@@ -251,7 +253,7 @@ hr { border:none; border-top: .5px solid var(--border); margin: 18px 0; }
   margin-bottom: 20px; padding: 8px 10px;
   border: 1px solid var(--border); border-radius: var(--r);
 }
-.vol-icon { font-size: 14px; color: var(--sub); flex-shrink:0; width:18px; text-align:center; }
+.vol-icon { font-size: 10px; color: var(--sub); flex-shrink:0; width:30px; text-align:center; }
 .vol-slider {
   flex: 1; -webkit-appearance: none; appearance: none;
   height: 3px; background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
@@ -272,7 +274,7 @@ hr { border:none; border-top: .5px solid var(--border); margin: 18px 0; }
   <h1>Timer</h1>
 
   <div class="vol-row">
-    <span class="vol-icon">🔈</span>
+    <span class="vol-icon">VOL</span>
     <input class="vol-slider" type="range" id="volSlider" min="15" max="90" value="30" oninput="updateVol(this)">
     <span class="vol-val" id="volVal">100%</span>
   </div>
@@ -289,9 +291,9 @@ hr { border:none; border-top: .5px solid var(--border); margin: 18px 0; }
     <div class="status" id="upSt"></div>
 
     <div class="ctrl">
-      <button class="btn" onclick="upReset()" title="リセット">↺</button>
-      <button class="btn main" id="upBtn" onclick="upToggle()">▶</button>
-      <button class="btn" id="upLapBtn" onclick="upLap()" title="ラップ" disabled>⚑</button>
+      <button class="btn" onclick="upReset()" title="リセット">RESET</button>
+      <button class="btn main" id="upBtn" onclick="upToggle()">START</button>
+      <button class="btn" id="upLapBtn" onclick="upLap()" title="ラップ" disabled>LAP</button>
     </div>
 
     <button class="lap-btn hidden" id="lapToggleBtn" onclick="upLap()">+ Lap</button>
@@ -319,7 +321,7 @@ hr { border:none; border-top: .5px solid var(--border); margin: 18px 0; }
         <button class="preset" onclick="sp(0,25,0)">25分</button>
         <button class="preset" onclick="sp(1,0,0)">60分</button>
       </div>
-      <button class="start-btn" onclick="cdBegin()">▶ &nbsp;スタート</button>
+      <button class="start-btn" onclick="cdBegin()">スタート</button>
     </div>
 
     <!-- 実行画面 -->
@@ -346,9 +348,9 @@ hr { border:none; border-top: .5px solid var(--border); margin: 18px 0; }
         <div class="nxt" id="cdNxt"></div>
       </div>
       <div class="ctrl">
-        <button class="btn" onclick="cdStop()" title="停止">■</button>
-        <button class="btn main" id="cdTogBtn" onclick="cdToggle()">⏸</button>
-        <button class="btn" onclick="cdSkip()" title="次へ">⏭</button>
+        <button class="btn" onclick="cdStop()" title="停止">STOP</button>
+        <button class="btn main" id="cdTogBtn" onclick="cdToggle()">PAUSE</button>
+        <button class="btn" onclick="cdSkip()" title="次へ">NEXT</button>
       </div>
     </div>
   </div>
@@ -370,17 +372,17 @@ hr { border:none; border-top: .5px solid var(--border); margin: 18px 0; }
           <span class="sep" style="font-size:16px;">:</span>
           <input class="num" type="number" id="newS" min="0" max="59" value="0" style="width:50px;font-size:16px;">
         </div>
-        <button class="add-btn" onclick="addStep()">＋追加</button>
+        <button class="add-btn" onclick="addStep()">追加</button>
       </div>
 
       <div class="rep-row">
         <span class="lbl">繰り返し</span>
         <input type="number" class="rep-in" id="repCnt" min="1" max="999" value="3">
         <span style="font-size:12px;color:var(--dim);">回</span>
-        <button class="inf-btn" id="infBtn" onclick="toggleInf()">∞</button>
+        <button class="inf-btn" id="infBtn" onclick="toggleInf()">無限</button>
       </div>
 
-      <button class="start-btn" id="ivStartBtn" onclick="ivBegin()" disabled>▶ &nbsp;スタート</button>
+      <button class="start-btn" id="ivStartBtn" onclick="ivBegin()" disabled>スタート</button>
     </div>
 
     <!-- 実行画面 -->
@@ -407,15 +409,15 @@ hr { border:none; border-top: .5px solid var(--border); margin: 18px 0; }
         <div class="nxt" id="ivNxt"></div>
       </div>
       <div class="ctrl">
-        <button class="btn" onclick="ivStop()" title="停止">■</button>
-        <button class="btn main" id="ivTogBtn" onclick="ivToggle()">⏸</button>
-        <button class="btn" onclick="ivSkip()" title="次へ">⏭</button>
+        <button class="btn" onclick="ivStop()" title="停止">STOP</button>
+        <button class="btn main" id="ivTogBtn" onclick="ivToggle()">PAUSE</button>
+        <button class="btn" onclick="ivSkip()" title="次へ">NEXT</button>
       </div>
     </div>
   </div>
 
 </div><!-- /.app -->
-<footer class="site-footer">Potassium Iodide &amp; Yuki Orita 2026</footer>
+<footer class="site-footer">Potassium Iodide &amp; Yuki Orita 2026 · <a href="https://studio-rizi.pages.dev/">studio-rizi.pages.dev</a></footer>
 
 <script>
 // ─────────────────────────────────────────
@@ -439,9 +441,6 @@ function updateVol(el) {
   // 表示: 基準(30)を100%として相対パーセント
   const pct = Math.round(el.value / 30 * 100);
   $('volVal').textContent = pct + '%';
-  // アイコン切り替え
-  const icon = el.value < 30 ? '🔈' : el.value < 60 ? '🔉' : '🔊';
-  el.previousElementSibling.textContent = icon;
 }
 
 function beep(done) {
@@ -478,14 +477,14 @@ function upToggle() {
   if (!uRun) {
     uT0 = Date.now() - uMs;
     uRun = true;
-    $('upBtn').textContent = '⏸';
+    $('upBtn').textContent = 'PAUSE';
     setSt('upSt','RUNNING','on');
     $('upLapBtn').disabled = false;
     uTick();
   } else {
     cancelAnimationFrame(uRaf);
     uRun = false;
-    $('upBtn').textContent = '▶';
+    $('upBtn').textContent = 'RESUME';
     setSt('upSt','PAUSED','pause');
   }
 }
@@ -494,7 +493,7 @@ function upReset() {
   cancelAnimationFrame(uRaf);
   uRun=false; uMs=0; uLaps=[];
   $('upDisp').textContent = '00:00:00';
-  $('upBtn').textContent = '▶';
+  $('upBtn').textContent = 'START';
   setSt('upSt','','');
   $('upLapBtn').disabled = true;
   $('lapToggleBtn').classList.add('hidden');
@@ -526,7 +525,7 @@ function cdBegin() {
 
   $('cdSetup').style.display = 'none';
   $('cdRun').style.display   = '';
-  $('cdTogBtn').textContent  = '⏸';
+  $('cdTogBtn').textContent  = 'PAUSE';
   $('cdTogBtn').disabled     = false;
   $('cdHms').classList.remove('done');
   setSt('cdSt','RUNNING','on');
@@ -582,7 +581,7 @@ function cdNext() {
   $('cdHms').classList.add('done');
   setSt('cdSt','完了！','on');
   $('cdRing').style.strokeDashoffset = 973.89;
-  $('cdTogBtn').textContent = '▶';
+  $('cdTogBtn').textContent = 'DONE';
   $('cdTogBtn').disabled = true;
   $('cdNxt').textContent = '';
   cdSess = null;
@@ -605,7 +604,7 @@ function renderSteps() {
       <span class="step-num">${i+1}</span>
       <span class="step-lbl">${iv.label || '—'}</span>
       <span class="step-time">${fmt(iv.ms)}</span>
-      <button class="delbtn" onclick="delStep(${i})">✕</button>
+      <button class="delbtn" onclick="delStep(${i})">削除</button>
     </div>`
   ).join('');
 }
@@ -633,7 +632,7 @@ function ivBegin() {
 
   $('ivSetup').style.display = 'none';
   $('ivRun').style.display   = '';
-  $('ivTogBtn').textContent  = '⏸';
+  $('ivTogBtn').textContent  = 'PAUSE';
   $('ivTogBtn').disabled     = false;
   $('ivHms').classList.remove('done');
   setSt('ivSt','RUNNING','on');
@@ -662,7 +661,7 @@ function ivStop() {
 function ivUI() {
   if (!ivSess) return;
   const step = ivSess.queue[ivSess.curStep];
-  const rounds = ivSess.rounds===Infinity ? '∞' : ivSess.rounds;
+  const rounds = ivSess.rounds===Infinity ? '無限' : ivSess.rounds;
   const remain = ivSess.paused ? ivSess.pauseLeft : Math.max(0, ivSess.stepEnd - Date.now());
   const pct = ivSess.stepTotal > 0 ? remain / ivSess.stepTotal : 0;
   $('ivRing').style.strokeDashoffset = 973.89 * (1 - pct);
@@ -696,7 +695,7 @@ function ivNext() {
     $('ivHms').classList.add('done');
     setSt('ivSt','完了！','on');
     $('ivRing').style.strokeDashoffset = 973.89;
-    $('ivTogBtn').textContent='▶'; $('ivTogBtn').disabled=true;
+    $('ivTogBtn').textContent='DONE'; $('ivTogBtn').disabled=true;
     $('ivNxt').textContent=''; $('ivBadge').textContent='';
     ivSess=null; return;
   }
@@ -740,12 +739,12 @@ function pauseResume(sess, togId, stId, tickFn) {
     cancelAnimationFrame(sess.raf);
     sess.paused    = true;
     sess.pauseLeft = Math.max(0, sess.stepEnd - Date.now());
-    $(togId).textContent = '▶';
+    $(togId).textContent = 'RESUME';
     setSt(stId,'PAUSED','pause');
   } else {
     sess.stepEnd = Date.now() + sess.pauseLeft;
     sess.paused  = false;
-    $(togId).textContent = '⏸';
+    $(togId).textContent = 'PAUSE';
     setSt(stId,'RUNNING','on');
     sess.raf = requestAnimationFrame(tickFn);
   }
@@ -765,7 +764,7 @@ function resetRingUI(hmsId,secId,stId,badgeId,nameId,nxtId,ringId,togId) {
   $(nameId).textContent  = '';
   $(nxtId).textContent   = '';
   $(ringId).style.strokeDashoffset = 0;
-  $(togId).textContent  = '⏸';
+  $(togId).textContent  = 'PAUSE';
   $(togId).disabled     = false;
 }
 
